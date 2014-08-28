@@ -7,9 +7,9 @@
 // @include        https://secure.gog.com/game/*
 // @include        https://secure.gog.com/*/game/*
 // @author         Didero
-// @version        2.2.2
-// @updateURL      https://github.com/Didero/Greasemonkey-Userscripts/raw/master/userscripts/GOGcom_Add_Forum_Link.js
-// @downloadURL    https://github.com/Didero/Greasemonkey-Userscripts/raw/master/userscripts/GOGcom_Add_Forum_Link.js
+// @version        2.2.3
+// @updateURL      https://github.com/Didero/Greasemonkey-Userscripts/raw/master/userscripts/GOGcom_Add_Forum_Link.user.js
+// @downloadURL    https://github.com/Didero/Greasemonkey-Userscripts/raw/master/userscripts/GOGcom_Add_Forum_Link.user.js
 // @grant          GM_registerMenuCommand
 // ==/UserScript==
 
