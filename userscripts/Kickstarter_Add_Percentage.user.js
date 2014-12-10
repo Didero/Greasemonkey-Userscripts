@@ -5,7 +5,7 @@
 // @description    On a Kickstarter project page, displays the percentage of the goal reached, and the difference between the pledged and asked amount
 // @include        http://www.kickstarter.com/projects/*/*
 // @include        https://www.kickstarter.com/projects/*/*
-// @version        3.2.4
+// @version        3.2.5
 // @downloadURL    https://github.com/Didero/Greasemonkey-Userscripts/raw/master/userscripts/Kickstarter_Add_Percentage.user.js
 // @updateURL      https://github.com/Didero/Greasemonkey-Userscripts/raw/master/userscripts/Kickstarter_Add_Percentage.user.js
 // @grant          none
@@ -38,12 +38,14 @@ if (pledgeAmountDiv) {
 		
 		//Display the percentage
 		var percentageDisplay = document.createElement('span');
-		percentageDisplay.innerHTML = ' (' + percentageRaised + '% )';
+		percentageDisplay.className = 'h5';
+		percentageDisplay.innerHTML = ' (' + percentageRaised + '%)';
 		pledgeAmountDiv.parentNode.appendChild(percentageDisplay);
 		
 		//Display the stats in a separate line, for more room. Nest it just like the other numbers, so it gets formatted properly
-		var moneyDisplay = document.createElement('h5');
-		moneyDisplay.innerHTML = '<div><span>' + currencySymbol + pledgeDifference + ' ' + leftOrOverTarget + ' target</span></div>';
-		pledgeAmountDiv.parentNode.parentNode.insertBefore(moneyDisplay, pledgeAmountDiv.parentNode.nextSibling);
+		var moneyDisplay = document.createElement('div');
+		moneyDisplay.className = 'h5';
+		moneyDisplay.innerHTML = currencySymbol + pledgeDifference + ' ' + leftOrOverTarget + ' target';
+		pledgeAmountDiv.parentNode.appendChild(moneyDisplay);
 	}
 }
