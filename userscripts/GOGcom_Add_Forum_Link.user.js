@@ -7,17 +7,17 @@
 // @include        https://secure.gog.com/game/*
 // @include        https://secure.gog.com/*/game/*
 // @author         Didero
-// @version        2.2.3
+// @version        2.3.2
 // @updateURL      https://github.com/Didero/Greasemonkey-Userscripts/raw/master/userscripts/GOGcom_Add_Forum_Link.user.js
 // @downloadURL    https://github.com/Didero/Greasemonkey-Userscripts/raw/master/userscripts/GOGcom_Add_Forum_Link.user.js
 // @grant          GM_registerMenuCommand
 // ==/UserScript==
 
 //First some variables that more advanced users might want to customise (I hope that's not necessary though)
-var forumLabelText = 'game forum'; //The text that will show in the left column of the game information
-var forumNotFoundText = 'unavailable'; //The text for when the specific forum of the game can't be found
-var seriesSuffix = ' (and series)'; //Will be appended to the link when the forum found is for the game's series instead of for the one game
-var loadingText = 'loading...';
+var forumLabelText = 'forum'; //The text that will show on the 'Forum' button
+var forumNotFoundText = 'no forum found'; //The text for when the specific forum of the game can't be found
+var seriesSuffix = ' (and series)'; //Will be appended to the button text when the forum found is for the game's series instead of for the one game
+var loadingText = 'forumlink loading...';
 
 //Some functions to replace built-in Greasemonkey functions, for portability
 function setValue(key, value) {
@@ -128,16 +128,6 @@ function toggleGreasemonkeyValue(valueName, defaultValue, refreshOnChange) {
 	else deleteValue(valueName); //Since the default is either 'true' or 'false', there's no need to store that. Efficiency!	
 	if (refreshOnChange) window.location.reload();
 }
-//This function is needed to get the displayed game title easily
-function getMetaData(propertyName) { 
-	var metaTags = document.getElementsByTagName('meta');
-	for (var i=0; i < metaTags.length; i++) {
-		if (metaTags[i].getAttribute("name") == propertyName) {
-			return metaTags[i].getAttribute("content");
-		}
-	}
-	return ""; //If no matching meta tag was found, return nothing
-}
 //Source: http://stackoverflow.com/questions/280634/endswith-in-javascript
 function endsWith(str, suffix) {
 	return str.indexOf(suffix, str.length - suffix.length) !== -1;
@@ -149,8 +139,8 @@ function getPositionOfFirstNumber(str) {
 	else return str.length;
 }
 function cleanUpString(str) {
-	//Remove anything that isn't a number,letter or space. Replace spaces and dashes with an underscore. Prevent repeated underscores. Remove trailing underscores.
-	return str.replace(/[^\d\w\s]/g, '').replace(/[ -]/g,'_').replace(/(_){2,}/g, '_').replace(/_$/g,'').toLowerCase();
+	//Remove anything that isn't a number, letter or space. Replace spaces and dashes with an underscore. Prevent repeated underscores. Remove trailing underscores.
+	return str.toLowerCase().replace(/[^\d\w\s]/g, '').replace(/[ -]/g,'_').replace(/(_){2,}/g, '_').replace(/_$/g,'');
 }
 function getGamePartOfUrl() {
 	return getPartAfterLastChar(simpleForumUrl, '/');
@@ -167,14 +157,16 @@ function removeParts(str, separator, amountToRemove) {
 	return parts.join(separator);
 }
 function getGameName() {
-	var gameName = getMetaData('og:title');
-	if (endsWith(gameName, ', The ') || endsWith(gameName, ', The')) gameName = 'The '+gameName.substring(0, gameName.lastIndexOf(','));
+	var gameName = document.getElementsByTagName('title')[0].textContent.trim();
+	//Remove the gog.com suffix
+	gameName = gameName.substring(0, gameName.length-10);
+	if (endsWith(gameName, ', The')) gameName = 'The '+gameName.substring(0, gameName.lastIndexOf(','));
 	return gameName;
 }
 
 //** ACTUAL SCRIPT **//
 //If the provided page exists, it sets that page as the target for the forum link. Otherwise it tries the next attempt (see 'urlChecker' below)
-function checkIfUrlExists(url, linktext, attempt, callback, addSeriesSuffix) {
+function checkIfUrlExists(url, attempt, callback, addSeriesSuffix) {
 	debuglog('Attempt '+attempt + (addSeriesSuffix ? '.2' : '.1') + ': checking url "'+url+'"');
 	//No need to check the same url twice.
 	if (urlsChecked.indexOf(url) > -1) {
@@ -188,17 +180,14 @@ function checkIfUrlExists(url, linktext, attempt, callback, addSeriesSuffix) {
 		http.onreadystatechange = function() {
 			if (this.readyState == 4) { //4 is the code for 'ready'. I used 'this.DONE' before and that worked, not sure what broke it
 				//debuglog('HTTP Request status: '+this.status);
-				if (this.status == 200) setLinkTarget(url, linktext); //If the page exists, no need to continue, set the forum link to this url
+				if (this.status == 200) setLinkTarget(url, addSeriesSuffix); //If the page exists, no need to continue, set the forum link to this url
 				else if (!addSeriesSuffix) { //Try again with '_series' at the end if that hasn't been done already
 					url = url.substring(0, getPositionOfFirstNumber(url));
 					if (url.charAt(url.length-1) != '_') url += '_'; //Add an underscore at the end, if necessary. Otherwise 'series' prefix doesn't work
 					url += 'series';
 					//Only check the url if it isn't just the series suffix
-					if (!endsWith(url, '/_series')) checkIfUrlExists(url, linktext + seriesSuffix, attempt, callback, true);
-					else {
-						debuglog('Skipping series check');
-						callback(attempt+1);
-					}
+					if (!endsWith(url, '/_series')) checkIfUrlExists(url, attempt, callback, true);
+					else callback(attempt+1);
 				}
 				else callback(attempt+1); //If the 'series' suffix was tried already, move on to the next attempt
 			}
@@ -207,11 +196,11 @@ function checkIfUrlExists(url, linktext, attempt, callback, addSeriesSuffix) {
 	}
 }
 //A simple function to make setting the target of the forum link easy. Since this is used in a few places, a function seemed like the best way
-function setLinkTarget(linktarget, text) {
+function setLinkTarget(linktarget, isLinkToSeriesForum) {
 	forumlink.href = linktarget;
-	forumlink.innerHTML = text;
-	forumlink.className = 'un'; //Underline the link, to emphasise it can be clicked now. This way it fits in nicely
-
+	forumlink.innerHTML = forumLabelText;
+	if (isLinkToSeriesForum) forumlink.innerHTML += seriesSuffix;
+	
 	//Only (allow users to) save the forum url if we found one and if there isn't one already stored
 	if (linktarget != defaultUrl && getValue(getGamePartOfUrl(), '') == '') {
 		if (getValue('storeResults', true)) storeForumLocation(linktarget);
@@ -221,17 +210,15 @@ function setLinkTarget(linktarget, text) {
 }
 
 //On to the main event! First find the proper location, below the rest of the game info
-var gameSpecs = document.getElementsByClassName('product-details');
-if (gameSpecs.length != 1) {
-	debuglog("Unexpected about of game spec elements found. Expected 1, found " + gameSpecs.length);
-}
+var socialButtons = document.getElementsByClassName('socials');
+if (socialButtons.length != 1 && true == false) debuglog("Unexpected about of social button sections found. Expected 1, found " + socialButtons.length);
 else {
-	var gameSpecList = gameSpecs[0];
-	var simpleForumUrl = window.location.href.replace('/game/', '/forum/'); //The simplest forum URL for a game is very similar to the gamepage's
+	var forumLinkParentnode = socialButtons[0].parentNode;
+	//The simplest forum URL for a game is very similar to the gamepage's
+	//  Use 'origin + pathname' instead of 'href' to remove any possible search parameters ('?pp=ofwnf....' at the end), which gets added for partners
+	var simpleForumUrl = window.location.origin + window.location.pathname.replace('/game/', '/forum/');
 	//If the user got to the page by clicking a link on the front page, an anchor gets added (e.g. '.../#s_0'). Remove that
-	if (simpleForumUrl.lastIndexOf('#') != -1) {
-		simpleForumUrl = simpleForumUrl.substring(0, simpleForumUrl.indexOf('#'));
-	}
+	if (simpleForumUrl.lastIndexOf('#') != -1) simpleForumUrl = simpleForumUrl.substring(0, simpleForumUrl.indexOf('#'));
 	//Remove trailing slashes
 	if (endsWith(simpleForumUrl, '/')) simpleForumUrl = simpleForumUrl.substring(0, simpleForumUrl.length - 1);
 	var gameName = getGameName();
@@ -241,18 +228,13 @@ else {
 	var defaultUrl = simpleForumUrl.substring(0, simpleForumUrl.lastIndexOf('/') + 1); //+1 to include the slash. Easy to append stuff to
 	
 	//Create most of the link and surrounding decorations already. When forum is found, all that needs to be done is update the link's href
-	var forumLabel = document.createElement('dt');
-	forumLabel.className = 'product-details__category';
-	forumLabel.innerHTML = forumLabelText;
-	gameSpecList.appendChild(forumLabel);
-	
 	var forumlink = document.createElement('a');
 	forumlink.innerHTML = loadingText;
 	if (getValue('openInNewWindow', false)) forumlink.target = '_blank'; //Have the forum open in a new window, if the user wants
-	var forumlinkContainer = document.createElement('dd');
-	forumlinkContainer.className = 'product-details__data';
+	var forumlinkContainer = document.createElement('div');
+	forumlinkContainer.className = 'wishlist-btn social-button--w1'; //Copy the layout of the Wishlist button, so we fit right in
 	forumlinkContainer.appendChild(forumlink);
-	gameSpecList.appendChild(forumlinkContainer);
+	forumLinkParentnode.appendChild(forumlinkContainer);
 	
 	//Check if the forum exists before linking to it
 	var urlChecker = function(attempt) {
@@ -339,12 +321,13 @@ else {
 			break;
 			default: //If the game's forum wasn't found, do nothing
 				debuglog('No forum found, using default');
-				setLinkTarget(defaultUrl, forumNotFoundText);
+				setLinkTarget(defaultUrl, false);
+				forumlink.innerHTML = forumNotFoundText;
 				return; //Very important, prevents infinite loop (Script got up to attempt 1275 during testing)
 			break;
 		} //End of switch-block
 		
-		if (url != '') checkIfUrlExists(url, gameName, attempt, urlChecker, false);
+		if (url != '') checkIfUrlExists(url, attempt, urlChecker, false);
 		else { //if no URL was set, skip this attempt
 			debuglog('Skipping attempt '+attempt);
 			urlChecker(attempt+1);
@@ -353,12 +336,7 @@ else {
 	
 	//If there's a stored value, use that
 	var storedForumLocation = getValue(getGamePartOfUrl(), '');
-	if (storedForumLocation != '') {
-		debuglog('Forum URL already stored, using "'+defaultUrl+storedForumLocation+'"');
-		var linktext = getGameName();
-		if (endsWith(storedForumLocation, '_series')) linktext += seriesSuffix;
-		setLinkTarget(defaultUrl + storedForumLocation, linktext);
-	}
+	if (storedForumLocation != '') setLinkTarget(defaultUrl + storedForumLocation, storedForumLocation.lastIndexOf('_series') === storedForumLocation.length - 7);
 	else {
 		var urlsChecked = new Array();
 		urlChecker(0); //Set the whole thing off
