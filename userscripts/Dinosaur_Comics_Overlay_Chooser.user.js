@@ -4,7 +4,9 @@
 // @description    Dinosaur Comics has a fairly hidden feature where you can get an overlay that replaces the regular characters with, for instance, XKCD or Problem Sleuth images. This script makes it easier to get to those overlays by providing a drop-down box to select from.
 // @include        http://www.qwantz.com/index.php*
 // @include        http://qwantz.com/index.php*
-// @version        1.8.3
+// @include        http://qwantz.com/
+// @include        http://www.qwantz.com/
+// @version        1.8.4
 // @updateURL      https://github.com/Didero/Greasemonkey-Userscripts/raw/master/userscripts/Dinosaur_Comics_Overlay_Chooser.user.js
 // @downloadURL    https://github.com/Didero/Greasemonkey-Userscripts/raw/master/userscripts/Dinosaur_Comics_Overlay_Chooser.user.js
 // @grant          none
